@@ -31,12 +31,12 @@ func main() {
 	time.Sleep(time.Second * 3)
 
 	//Print number of active jobs
-	println("Active jobs:", p.GetActive())
+	println("Active jobs:", p.Active())
 
 	time.Sleep(time.Second * 1)
 
 	//Print number of jobs in queue
-	println("Pending jobs:", p.GetPending())
+	println("Pending jobs:", p.Pending())
 
 	//Stop the routine pool
 	p.Stop()

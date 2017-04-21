@@ -6,16 +6,13 @@ type Pool struct {
 	size uint64
 
 	//channelSize is size of the channel buffer to which the works/jobs are sent
-	channelSize uint64
-
-	//active is the no.of work/tasks that are active
-	active uint64
+	channelSize uint8
 
 	//workerPool is the channel buffer to which all works/jobs are sent
 	workerPool chan poolFn
 
-	//counterChan is the channel used to keep count of active works
-	counterChan chan *struct{}
+	//active is the channel used to keep count of active works
+	active chan *struct{}
 
 	//quit is used to exit all the routes
 	quit chan struct{}
@@ -40,7 +37,7 @@ func (p *Pool) Start() {
 
 	println("Starting routine pool")
 
-	for i := 0; i < int(p.size); i++ {
+	for i := uint64(0); i < p.size; i++ {
 		go func(pl *Pool, quit chan struct{}) {
 			for {
 				select {
@@ -50,9 +47,9 @@ func (p *Pool) Start() {
 
 				// Pulling work from the channel buffer
 				case work := <-pl.workerPool:
-					p.counterChan <- nil
+					p.active <- nil
 					work()
-					<-p.counterChan
+					<-p.active
 				}
 			}
 		}(p, p.quit)
@@ -65,18 +62,18 @@ func (p *Pool) Stop() {
 	println("Stopped routine pool")
 }
 
-//GetActive returns the number of active jobs
-func (p *Pool) GetActive() int {
-	return len(p.counterChan)
+//Active returns the number of active jobs
+func (p *Pool) Active() int {
+	return len(p.active)
 }
 
-//GetPending returns the number of jobs in queue
-func (p *Pool) GetPending() int {
+//Pending returns the number of jobs in queue
+func (p *Pool) Pending() int {
 	return len(p.workerPool)
 }
 
 //New returns a Pool object pointer with all the default values set
-func New(pSize uint64, csize uint64) *Pool {
+func New(pSize uint64, csize uint8) *Pool {
 	p := &Pool{
 		size:        pSize,
 		channelSize: csize,
@@ -88,11 +85,11 @@ func New(pSize uint64, csize uint64) *Pool {
 	}
 
 	if p.channelSize == 0 {
-		p.channelSize = p.size + 50
+		p.channelSize = 100
 	}
 
 	p.workerPool = make(chan poolFn, p.channelSize)
-	p.counterChan = make(chan *struct{}, p.channelSize)
+	p.active = make(chan *struct{}, p.size)
 
 	return p
 }
