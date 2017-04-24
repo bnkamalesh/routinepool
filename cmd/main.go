@@ -38,6 +38,6 @@ func main() {
 	//Print number of jobs in queue
 	println("Pending jobs:", p.Pending())
 
-	//Stop the routine pool
+	//Gracefully shutdown the routine pool.
 	p.Stop()
 }

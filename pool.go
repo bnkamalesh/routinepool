@@ -1,5 +1,9 @@
 package routinepool
 
+import "errors"
+
+var errBlocked = errors.New("Pool stopped, cannot push any further tasks")
+
 //Pool is the struct which handles the worker pool
 type Pool struct {
 	//size is the pool size, i.e. no.of go routines
@@ -14,6 +18,9 @@ type Pool struct {
 	//active is the channel used to keep count of active works
 	active chan *struct{}
 
+	//block if set to true, will block any further jobs being pushed/send to the pool
+	block bool
+
 	//quit is used to exit all the routes
 	quit chan struct{}
 }
@@ -27,15 +34,18 @@ type worker struct {
 type workerPool chan []worker
 
 //Push pushes a task to the worker pool
-func (p *Pool) Push(work poolFn) {
+func (p *Pool) Push(work poolFn) error {
+	if p.block {
+		return errBlocked
+	}
+
 	p.workerPool <- work
+	return nil
 }
 
 //Start starts the worker Q
 func (p *Pool) Start() {
 	p.quit = make(chan struct{})
-
-	println("Starting routine pool")
 
 	for i := uint64(0); i < p.size; i++ {
 		go func(pl *Pool, quit chan struct{}) {
@@ -49,7 +59,9 @@ func (p *Pool) Start() {
 				case work := <-pl.workerPool:
 					p.active <- nil
 					work()
-					<-p.active
+					if pl.block == false {
+						<-p.active
+					}
 				}
 			}
 		}(p, p.quit)
@@ -58,8 +70,19 @@ func (p *Pool) Start() {
 
 //Stop stops the pool and exits all the go routines immediately
 func (p *Pool) Stop() {
-	close(p.quit)
-	println("Stopped routine pool")
+	//block accepting any furhter tasks
+	p.block = true
+
+	//Graceful shutdown of pool, makes sure if all pending tasks are completed
+	for {
+		select {
+		case <-p.active:
+			if len(p.workerPool) == 0 && len(p.active) == 0 {
+				close(p.quit)
+				return
+			}
+		}
+	}
 }
 
 //Active returns the number of active jobs
