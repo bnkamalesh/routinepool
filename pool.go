@@ -18,14 +18,11 @@ type Pool struct {
 	//active is the channel used to keep count of active tasks
 	active chan *struct{}
 
-	//done is the channel used to keep count of completed tasks
-	done chan *struct{}
-
 	//block if set to true, will block any further jobs being pushed/send to the pool
 	block bool
 
 	//quit is used to exit all the routes
-	quit chan *struct{}
+	quit []chan *struct{}
 }
 
 type poolFn func()
@@ -48,43 +45,28 @@ func (p *Pool) Push(work poolFn) error {
 
 //Start starts the worker Q
 func (p *Pool) Start() {
-	p.quit = make(chan *struct{})
+	//all individual quit channels are saved in this
+	p.quit = make([]chan *struct{}, p.size)
 
 	for i := uint64(0); i < p.size; i++ {
-		go func(pl *Pool) {
+		//an individual quit channel is given to each routine
+		q := make(chan *struct{})
+		p.quit[i] = q
+
+		go func(quit chan *struct{}) {
 			for {
 				select {
+				case <-quit:
+					return
 
-				// Pulling work from the channel buffer
-				case work, ok := <-pl.workerPool:
-					if !ok {
-						return
-					}
-					pl.active <- nil
+				case work := <-p.workerPool:
+					p.active <- nil
 					work()
 					<-p.active
-					pl.done <- nil
 				}
 			}
-		}(p)
+		}(q)
 	}
-
-	go func() {
-		for range p.done {
-			if p.block {
-				// Initiate shutdown only if Stop() (i.e. blocked = true) is called and workerpool is blocked from
-				// accepting any further tasks.
-				if len(p.workerPool) == 0 && len(p.active) == 0 {
-					//close all channels
-					close(p.workerPool)
-					close(p.active)
-					close(p.done)
-					p.quit <- nil
-					return
-				}
-			}
-		}
-	}()
 }
 
 //Stop stops the pool and exits all the go routines immediately
@@ -93,9 +75,9 @@ func (p *Pool) Stop() {
 	p.block = true
 
 	//Graceful shutdown of pool, makes sure if all pending tasks are completed
-	for range p.quit {
-		close(p.quit)
-		return
+	//sending kill signal to invidual routines
+	for _, q := range p.quit {
+		q <- nil
 	}
 }
 
@@ -128,7 +110,6 @@ func New(pSize uint64, csize uint8) *Pool {
 	p.workerPool = make(chan poolFn, p.channelSize)
 
 	p.active = make(chan *struct{}, p.size)
-	p.done = make(chan *struct{}, p.size)
 
 	return p
 }

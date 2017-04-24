@@ -13,9 +13,8 @@ const (
 
 //Do waits for 1 second and prints "Done!" to stdout
 func Do() {
-	time.Sleep(time.Second * 1)
+	time.Sleep(time.Millisecond * 650)
 	println("Done!")
-
 }
 
 func main() {
@@ -33,7 +32,7 @@ func main() {
 	//Print number of active jobs
 	println("Active jobs:", p.Active())
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 2)
 
 	//Print number of jobs in queue
 	println("Pending jobs:", p.Pending())
