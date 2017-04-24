@@ -23,6 +23,9 @@ type Pool struct {
 
 	//quit is used to exit all the routes
 	quit []chan *struct{}
+
+	//done is used to identify all done/idle routines
+	done []chan *struct{}
 }
 
 type poolFn func()
@@ -47,25 +50,38 @@ func (p *Pool) Push(work poolFn) error {
 func (p *Pool) Start() {
 	//all individual quit channels are saved in this
 	p.quit = make([]chan *struct{}, p.size)
+	p.done = make([]chan *struct{}, p.size)
 
 	for i := uint64(0); i < p.size; i++ {
 		//an individual quit channel is given to each routine
 		q := make(chan *struct{})
+		d := make(chan *struct{})
 		p.quit[i] = q
+		p.done[i] = d
 
-		go func(quit chan *struct{}) {
+		go func(quit, done chan *struct{}) {
+			var shutdown = false
 			for {
 				select {
 				case <-quit:
-					return
+					shutdown = true
+					if len(p.workerPool) == 0 {
+						done <- nil
+						return
+					}
 
 				case work := <-p.workerPool:
 					p.active <- nil
 					work()
 					<-p.active
+
+					if shutdown && len(p.workerPool) == 0 {
+						done <- nil
+						return
+					}
 				}
 			}
-		}(q)
+		}(q, d)
 	}
 }
 
@@ -78,6 +94,10 @@ func (p *Pool) Stop() {
 	//sending kill signal to invidual routines
 	for _, q := range p.quit {
 		q <- nil
+	}
+
+	for _, d := range p.done {
+		<-d
 	}
 }
 
