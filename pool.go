@@ -15,11 +15,11 @@ type Pool struct {
 	//workerPool is the channel buffer to which all tasks/jobs are sent
 	workerPool chan poolFn
 
-	//active is the channel used to keep count of active tasks
-	active chan *struct{}
-
 	//block if set to true, will block any further jobs being pushed/send to the pool
 	block bool
+
+	//active is the channel used to keep count of active tasks
+	active chan *struct{}
 
 	//quit is used to exit all the routes
 	quit []chan *struct{}
@@ -65,20 +65,16 @@ func (p *Pool) Start() {
 				select {
 				case <-quit:
 					shutdown = true
-					if len(p.workerPool) == 0 {
-						done <- nil
-						return
-					}
 
 				case work := <-p.workerPool:
 					p.active <- nil
 					work()
 					<-p.active
+				}
 
-					if shutdown && len(p.workerPool) == 0 {
-						done <- nil
-						return
-					}
+				if shutdown && len(p.workerPool) == 0 {
+					done <- nil
+					return
 				}
 			}
 		}(q, d)
@@ -96,6 +92,7 @@ func (p *Pool) Stop() {
 		q <- nil
 	}
 
+	//Wait for all gouroutines to send done signal
 	for _, d := range p.done {
 		<-d
 	}
