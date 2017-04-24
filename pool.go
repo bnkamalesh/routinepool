@@ -25,7 +25,7 @@ type Pool struct {
 	block bool
 
 	//quit is used to exit all the routes
-	quit chan struct{}
+	quit chan *struct{}
 }
 
 type poolFn func()
@@ -48,17 +48,12 @@ func (p *Pool) Push(work poolFn) error {
 
 //Start starts the worker Q
 func (p *Pool) Start() {
-	p.quit = make(chan struct{})
+	p.quit = make(chan *struct{})
 
 	for i := uint64(0); i < p.size; i++ {
 		go func(pl *Pool) {
 			for {
 				select {
-				//Listening for quit signal
-				case _, ok := <-pl.quit:
-					if !ok {
-						return
-					}
 
 				// Pulling work from the channel buffer
 				case work, ok := <-pl.workerPool:
@@ -67,11 +62,29 @@ func (p *Pool) Start() {
 					}
 					pl.active <- nil
 					work()
+					<-p.active
 					pl.done <- nil
 				}
 			}
 		}(p)
 	}
+
+	go func() {
+		for range p.done {
+			if p.block {
+				// Initiate shutdown only if Stop() (i.e. blocked = true) is called and workerpool is blocked from
+				// accepting any further tasks.
+				if len(p.workerPool) == 0 && len(p.active) == 0 {
+					//close all channels
+					close(p.workerPool)
+					close(p.active)
+					close(p.done)
+					p.quit <- nil
+					return
+				}
+			}
+		}
+	}()
 }
 
 //Stop stops the pool and exits all the go routines immediately
@@ -80,23 +93,9 @@ func (p *Pool) Stop() {
 	p.block = true
 
 	//Graceful shutdown of pool, makes sure if all pending tasks are completed
-	for {
-		select {
-		case <-p.done:
-			//Reduce active's count
-			<-p.active
-
-			// Initiate shutdown only if Stop() (i.e. blocked = true) is called and workerpool is blocked from
-			// accepting any further tasks.
-			if len(p.workerPool) == 0 && len(p.active) == 0 {
-				//close all channels
-				close(p.quit)
-				close(p.workerPool)
-				close(p.active)
-				close(p.done)
-				return
-			}
-		}
+	for range p.quit {
+		close(p.quit)
+		return
 	}
 }
 

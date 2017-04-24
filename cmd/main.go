@@ -28,12 +28,12 @@ func main() {
 		p.Push(Do)
 	}
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 2)
 
 	//Print number of active jobs
 	println("Active jobs:", p.Active())
 
-	time.Sleep(time.Second * 1)
+	time.Sleep(time.Second * 3)
 
 	//Print number of jobs in queue
 	println("Pending jobs:", p.Pending())
