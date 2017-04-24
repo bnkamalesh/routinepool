@@ -72,37 +72,32 @@ func (p *Pool) Start() {
 			}
 		}(p)
 	}
-
-	//Graceful shutdown of pool, makes sure if all pending tasks are completed
-	go func() {
-		for {
-			select {
-			case <-p.done:
-				//Reduce active's count
-				<-p.active
-
-				// Initiate shutdown only if Stop() (i.e. blocked = true) is called and workerpool is blocked from
-				// accepting any further tasks.
-				if p.block {
-					if len(p.workerPool) == 0 && len(p.active) == 0 {
-						//close all channels
-						close(p.quit)
-						close(p.workerPool)
-						close(p.active)
-						close(p.done)
-						return
-					}
-				}
-
-			}
-		}
-	}()
 }
 
 //Stop stops the pool and exits all the go routines immediately
 func (p *Pool) Stop() {
 	//block accepting any furhter tasks
 	p.block = true
+
+	//Graceful shutdown of pool, makes sure if all pending tasks are completed
+	for {
+		select {
+		case <-p.done:
+			//Reduce active's count
+			<-p.active
+
+			// Initiate shutdown only if Stop() (i.e. blocked = true) is called and workerpool is blocked from
+			// accepting any further tasks.
+			if len(p.workerPool) == 0 && len(p.active) == 0 {
+				//close all channels
+				close(p.quit)
+				close(p.workerPool)
+				close(p.active)
+				close(p.done)
+				return
+			}
+		}
+	}
 }
 
 //Active returns the number of active jobs
