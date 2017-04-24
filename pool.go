@@ -78,7 +78,10 @@ func (p *Pool) Stop() {
 		select {
 		case <-p.active:
 			if len(p.workerPool) == 0 && len(p.active) == 0 {
+				//close all channels
 				close(p.quit)
+				close(p.active)
+				close(p.workerPool)
 				return
 			}
 		}
