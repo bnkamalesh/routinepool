@@ -9,14 +9,17 @@ type Pool struct {
 	//size is the pool size, i.e. no.of go routines
 	size uint64
 
-	//channelSize is size of the channel buffer to which the works/jobs are sent
+	//channelSize is size of the channel buffer to which the tasks/jobs are sent
 	channelSize uint8
 
-	//workerPool is the channel buffer to which all works/jobs are sent
+	//workerPool is the channel buffer to which all tasks/jobs are sent
 	workerPool chan poolFn
 
-	//active is the channel used to keep count of active works
+	//active is the channel used to keep count of active tasks
 	active chan *struct{}
+
+	//done is the channel used to keep count of completed tasks
+	done chan *struct{}
 
 	//block if set to true, will block any further jobs being pushed/send to the pool
 	block bool
@@ -52,13 +55,19 @@ func (p *Pool) Start() {
 			for {
 				select {
 				//Listening for quit signal
-				case <-pl.quit:
-					return
+				case _, ok := <-pl.quit:
+					if !ok {
+						return
+					}
 
 				// Pulling work from the channel buffer
-				case work := <-pl.workerPool:
+				case work, ok := <-pl.workerPool:
+					if !ok {
+						return
+					}
 					pl.active <- nil
 					work()
+					pl.done <- nil
 				}
 			}
 		}(p)
@@ -68,7 +77,10 @@ func (p *Pool) Start() {
 	go func() {
 		for {
 			select {
-			case <-p.active:
+			case <-p.done:
+				//Reduce active's count
+				<-p.active
+
 				// Initiate shutdown only if Stop() (i.e. blocked = true) is called and workerpool is blocked from
 				// accepting any further tasks.
 				if p.block {
@@ -77,6 +89,7 @@ func (p *Pool) Start() {
 						close(p.quit)
 						close(p.workerPool)
 						close(p.active)
+						close(p.done)
 						return
 					}
 				}
@@ -119,7 +132,9 @@ func New(pSize uint64, csize uint8) *Pool {
 	}
 
 	p.workerPool = make(chan poolFn, p.channelSize)
+
 	p.active = make(chan *struct{}, p.size)
+	p.done = make(chan *struct{}, p.size)
 
 	return p
 }
