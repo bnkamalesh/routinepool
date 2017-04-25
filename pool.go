@@ -1,6 +1,9 @@
+//Package routinepool lets you create a workerpool made of Go routines.
 package routinepool
 
-import "errors"
+import (
+	"errors"
+)
 
 var errBlocked = errors.New("Pool stopped, cannot push any further tasks")
 var errShutdown = errors.New("Shutdown in progress")
@@ -34,15 +37,11 @@ var tokensig = struct{}{}
 
 type poolFn func()
 
-type worker struct {
-	fn poolFn
-}
-
-type workerPool chan []worker
+type workerPool chan []poolFn
 
 //Push pushes a task to the worker pool
-func (p *Pool) Push(work poolFn) {
-	p.workerPool <- work
+func (p *Pool) Push(w poolFn) {
+	p.workerPool <- w
 }
 
 //Start starts the worker Q
