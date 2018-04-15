@@ -5,8 +5,9 @@ import (
 	"errors"
 )
 
-var errBlocked = errors.New("Pool stopped, cannot push any further tasks")
-var errShutdown = errors.New("Shutdown in progress")
+// ErrShutdown is the error returned if the pool shutdown is already in progress
+// And you try calling Stop()
+var ErrShutdown = errors.New("Shutdown in progress")
 
 //Pool is the struct which handles the worker pool
 type Pool struct {
@@ -87,7 +88,7 @@ func (p *Pool) Start() {
 func (p *Pool) Stop() error {
 	//prevents stop being executed multiple times
 	if p.block {
-		return errShutdown
+		return ErrShutdown
 	}
 
 	//block accepting any furhter tasks

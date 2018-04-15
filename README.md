@@ -1,8 +1,18 @@
+[![Build Status](https://travis-ci.org/bnkamalesh/webgo.svg?branch=master)](https://travis-ci.org/bnkamalesh/routinepool)
+[![](https://goreportcard.com/badge/github.com/bnkamalesh/routinepool)](https://goreportcard.com/report/github.com/bnkamalesh/routinepool)
+[![](https://cover.run/go/github.com/bnkamalesh/routinepool.svg?tag=golang-1.10)](https://cover.run/go/github.com/bnkamalesh/routinepool)
+[![](https://godoc.org/github.com/nathany/looper?status.svg)](http://godoc.org/github.com/bnkamalesh/routinepool)
+
 ## Routinepool
 
-[GoDoc](https://godoc.org/github.com/bnkamalesh/routinepool)
+Routinepool is a simple Go library to start a worker pool. The example provided 
+in the test illustrates everything what this worker pool can do. 
+e.g. See number of active jobs, pending jobs, stop worker pool etc.
 
-Routinepool is a simple Go library to start a worker pool. The [sample](https://github.com/bnkamalesh/routinepool/tree/master/cmd) included with the repo illustrates everything what this worker pool can do. e.g. See number of active jobs, pending jobs, stop worker pool etc.
+1. Start worker pool
+2. Push tasks/work to the pool
+3. See active number of tasks
+4. See pending tasks
 
 ### Methods available
 
