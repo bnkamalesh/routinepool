@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.org/bnkamalesh/routinepool.svg?branch=master)](https://travis-ci.org/bnkamalesh/routinepool)
-[![](https://goreportcard.com/badge/github.com/bnkamalesh/routinepool)](https://goreportcard.com/report/github.com/bnkamalesh/routinepool)
+[![](https://travis-ci.org/bnkamalesh/routinepool.svg?branch=master)](https://travis-ci.org/bnkamalesh/routinepool)
 [![](https://cover.run/go/github.com/bnkamalesh/routinepool.svg?tag=golang-1.10)](https://cover.run/go/github.com/bnkamalesh/routinepool)
-[![](https://godoc.org/github.com/nathany/looper?status.svg)](http://godoc.org/github.com/bnkamalesh/routinepool)
+[![](https://goreportcard.com/badge/github.com/bnkamalesh/routinepool)](https://goreportcard.com/report/github.com/bnkamalesh/routinepool)
 [![](https://api.codeclimate.com/v1/badges/d943c47434acfe470a88/maintainability)](https://codeclimate.com/github/bnkamalesh/routinepool/maintainability)
+[![](https://godoc.org/github.com/nathany/looper?status.svg)](http://godoc.org/github.com/bnkamalesh/routinepool)
 
 ## Routinepool
 
